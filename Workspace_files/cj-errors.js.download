@@ -1,0 +1,7 @@
+(function(CJ){
+		// add errors handler
+	CJ.Collection.prototype.errors = function () {
+		return this._coll.errors;
+	};
+
+})(CJ);

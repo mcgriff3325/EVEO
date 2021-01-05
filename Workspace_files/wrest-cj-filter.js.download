@@ -1,0 +1,207 @@
+(function($, CJ) {
+
+	var origSubmit = CJ.Template.prototype.submit,
+		origDel = CJ.Item.prototype.del;
+
+
+	function isObject(a) {
+	    return (!!a) && (a.constructor === Object);
+	}
+
+	/**
+	 * Duck punch Template.submit to extract ETAG from data and
+	 * use it to set If-Match.  This eliminates the need to make
+	 * and extra call to GET the object.  However this implies
+	 * that every GET call on a collection will always request
+	 * all fields including collections. (ic = true)
+	 */
+	CJ.Template.prototype.submit = function(method, opts) {
+		var etag;
+
+		if (isObject(method)) {
+			opts = method;
+			method = undefined;
+		}
+
+		method = method || this._method;
+		opts = opts || {};
+
+		if (method.toLowerCase() == 'put') {
+			this._tmpl.data.forEach(function(d){
+				if (d.name === 'etag')
+					etag = d.value;
+			});
+
+			if (etag)
+				opts = $.extend(true,{}, opts, { headers: {"If-Match": etag }});
+		}
+
+		return origSubmit.call(this, method, opts);
+	};
+
+	CJ.Item.prototype.del = function(opts) {
+		var etag;
+
+		opts = opts || {};
+
+		this._item.data.forEach(function(d){
+			if (d.name === 'etag')
+				etag = d.value;
+		});
+
+		if (etag)
+			opts = $.extend(true,{}, opts, { headers: {"If-Match": etag }});
+
+		return origDel.call(this, opts);
+	};
+
+
+	function processDates(data) {
+		if (data &&
+			data.collection &&
+			data.collection.template) {
+
+			var i=0, j=0, k=0,
+			    tmpl=data.collection.template.data || [],
+			    items=data.collection.items || [],
+			    dateCtrls = [],
+			    listOfCtrls = [];
+
+			// get list of date and listOf controls
+			for (i=0; i<tmpl.length; i++) {
+				if (tmpl[i].type == 'date' || tmpl[i].type == 'timestamp') { // date
+					dateCtrls.push(tmpl[i]);
+
+					// convert date default values in template
+					if (tmpl[i]['default'] !== undefined)
+						tmpl[i]['default'] = new Date(tmpl[i]['default']);
+				}
+				if (tmpl[i].type == 'listof') {
+					listOfCtrls.push(tmpl[i]);
+				}
+			}
+
+
+			// convert dates in items
+			for (k=0; k<items.length; k++) {
+				for (j=0; j<items[k].data.length; j++) {
+					for (i=0; i<dateCtrls.length; i++) {
+						if (items[k].data[j].name == dateCtrls[i].name &&
+								items[k].data[j].value) {
+							items[k].data[j].value =
+								new Date(items[k].data[j].value);
+						}
+					}
+					for (i=0; i<listOfCtrls.length; i++) {
+						if (items[k].data[j].name == listOfCtrls[i].name &&
+								items[k].data[j].value) {
+							items[k].data[j].value = processDates(items[k].data[j].value);
+						}
+					}
+				}
+			}
+		}
+
+		return data;
+	}
+
+	function toPureCJ(data, xhr, o) {
+		var	items,
+			template,
+			key,
+			error,
+			errors = {},
+			isJson = /json/.test(xhr.getResponseHeader('Content-Type'));
+
+		// only process content type json
+		if (isJson && typeof data === 'object') {
+
+			items = data &&
+			 		data.collection &&
+			 		data.collection.items || [];
+
+			// convert each item from map to array
+			items.forEach(function(item){
+				var arr = [], prop, key;
+				for (key in item.data) {
+					prop = {};
+					prop.name = key;
+					prop.value = item.data[key];
+					arr.push(prop);
+				}
+				item.data = arr;
+			});
+
+			// wrap template in data
+			template = data &&
+					   data.collection &&
+					   data.collection.template || undefined;
+
+			if (template)
+				data.collection.template = { data : template };
+
+			// fix error object
+			error = data &&
+			        data.collection &&
+			        data.collection.error || undefined;
+
+			if (error) {
+				for (key in error) {
+					errors[key] = [{
+							title : 'Error', // TODO: make specific in server
+							code : xhr.status,
+							message : error[key]
+						}];
+				}
+				data.collection.errors = errors;
+			}
+
+		} else if (isJson) {
+			return {
+				collection : {
+					href : o.url,
+					version : 1.0,
+					errors : {
+						__all : [{
+							title : 'Server Error',
+							code : 500,
+							message : 'An error has occurred and your request could not be processed.  Please try again. If the problem persists, contact support@workspace.com'
+						}]
+					}
+				}
+			};
+		}
+
+		return data;
+	}
+
+	function from(data, xhr, o) {
+		return processDates(data, xhr, o);
+	}
+
+	function stringifyDatesToTime(opts) {
+		// if contentType is set to json or no content-type and the data is not already a
+		// string then convert object to string
+		if  ((opts.data && typeof opts.data != "string") &&
+			( ("contentType" in opts && /\/json/.test(opts.contentType)) ||
+					(!("contentType" in opts)) ) ) {
+			// stringify data, if any
+			opts.data = JSON.stringify(opts.data, function(k,v) {
+				if (this[k] instanceof Date)
+					return this[k].getTime();
+				return v;
+			});
+		}
+
+		return opts;
+	}
+
+	function to(o) {
+		return o.processData ? stringifyDatesToTime(o) : o;
+	}
+
+	$.wrest.requestFilter(to);
+	$.wrest.responseFilter(from);
+
+
+})(jQuery, CJ);

@@ -1,0 +1,8 @@
+(function(CJ){
+
+	// mark getter / setters in CJ as read write so they can be
+	// data bound using jsviews
+	CJ.Data.prototype.value.set = true;
+	CJ.TemplateData.prototype.value.set = true;
+
+})(CJ);

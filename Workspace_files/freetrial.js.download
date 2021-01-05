@@ -1,0 +1,268 @@
+(function() {
+var invalidDomains = ["@mail.ru", "@0815.ru", "@163.com", "@0-mail.com", "@0wnd.org", "@10minutemail.", "@20minutemail.", "@2prong.com", "@30minutemail.com",
+		"@3d-painting.com", "@4warding.", "@4warding.org", "@60minutemail.com", "@675hosting.", "@6url.com", "@75hosting.",
+        "@7tags.com", "@9ox.net",
+        "@a-bc.net", "@addwit.com", "@afrobacon.com", "@ajaxapp.net", "@amilegit.com", "@amiri.net","@amiriindustries.com",
+        "@anonymbox.com", "@antichef.", "@antispam.de", "@aol.com", "@asdf.com", "@avepoint.com",
+        "@baxomale.ht.cx", "@beefmilk.com",
+        "@binkmail.com", "@bio-muesli.net", "@bobmail.info", "@bodhi.lawlita.com", "@bofthew.com", "@brefmail.com",
+        "@broadbandninja.com", "@bsnow.net", "@bugmenot.com", "@bumpymail.com",
+        "@casualdx.com", "@centermail.", "@chogmail.com",
+        "@emeil.ir", "@coieo.com", "@choicemail1.com", "@comcast.net", "@cool.fr.nf", "@correo.blogos.net", "@cosmorph.com",
+        "@courriel.fr.nf", "@courrieltemporaire.com", "@cubiclink.com", "@curryworld.de", "@cust.in",
+        "@dacoolest.com", "@dandikmail.com", "@dayrep.com", "@deadaddress.com", "@deadspam.com", "@despam.it",
+        "@devnullmail.com", "@dfgh.net", "@digitalsanctuary.com", "@discardmail.", "@disposableaddress.com", "@disposeamail.com",
+        "@disposemail.com", "@dispostable.com", "@dm.w3internet.co.uk", "@dodgeit.com", "@dodgit.", "@donemail.ru", "@dontreg.com",
+        "@dontsendmespam.de", "@drdrb.com", "@dshift.com", "@dumpandjunk.com", "@dump-email.info", "@dumpmail.de", "@dumpyemail.com",
+        "@e4ward.com", "@email60.com", "@emaildienst.de", "@emailias.com", "@emailigo.de", "@emailinfive.com", "@emailmiser.com",
+        "@emailsensei.com", "@emailtemporario.com.br", "@emailto.de", "@emailwarden.com", "@emailx.at.hm", "@emailxfer.com",
+        "@emz.net","@enterto.com", "@ephemail.net", "@etranquil.com", "@etranquil.net", "@etranquil.org", "@explodemail.com", "@fakeemail.com",
+        "@fakeinbox.com", "@fakeinformation.com", "@fastacura.com", "@fastchevy.com", "@fastchrysler.com", "@fastkawasaki.com",
+        "@fastmazda.com", "@fastmitsubishi.com", "@fastnissan.com", "@fastsubaru.com", "@fastsuzuki.com", "@fasttoyota.com",
+        "@fastyamaha.com", "@filzmail.com", "@fizmail.com", "@fr33mail.info", "@frapmail.com", "@front14.org", "@fux0ringduh.com",
+        "@garliclife.com", "@get1mail.com", "@get2mail.fr", "@getonemail.com", "@getonemail.net", "@ghosttexter.de",
+        "@girlsundertheinfluence.com", "@gishpuppy.com", "@gmail", "googlemail", "@gowikibooks.com", "@gowikicampus.com",
+        "@gowikicars.com", "@gowikifilms.com", "@gowikigames.com", "@gowikimusic.com", "@gowikinetwork.com", "@gowikitravel.com",
+        "@gowikitv.com", "@great-host.in", "@greensloth.com", "@gsrv.co.uk", "@guerillamail.", "@guerrillamailblock.com",
+        "@h.mintemail.com", "@h8s.org", "@haltospam.com", "@hatespam.org", "@hidemail.de", "@hochsitze.com", "@hotmail.",
+        "@hotpop.com", "@hulapla.de",
+        "@idera.com", "@ieatspam.info", "@ihateyoualot.info", "@iheartspam.org", "@imails.info", "@iname.com", "@inbox.lv", "@inboxclean.com",
+        "@inboxclean.org", "@incognitomail.", "@insorg-mail.info", "@ipoo.org", "@irish2me.com", "@iwi.net",
+        "@jetable.com", "@jetable.fr.nf", "@jetable.net", "@jetable.org", "@jnxjn.com",
+        "@kasmail.com", "@kaspop.com", "@keepmymail.com", "@killmail.", "@kir.ch.tc", "@klassmaster.", "@klzlk.com",
+        "@kulturbetrieb.info", "@kurzepost.de",
+        "@letthemeatspam.com", "@lhsdv.com", "@lifebyfood.com", "@link2mail.net", "@litedrop.com", "@live.", "@lol.ovpn.to",
+        "@lookugly.com", "@lopl.co.cc", "@lortemail.dk", "@lr78.com", "@lycos.com",
+        "@m4ilweb.info", "@maboard.com", "@made4the.net", "@mail.by", "@mail.com", "@mail.mezimages.net", "@mail333.com",
+        "@mail4trash.com", "@mailbidon.com", "@mailblocks.com", "@mailcatch.com", "@maileater.com", "@mailexpire.com",
+        "@mailfreeonline.com", "@mailin8r.com", "@mailinater.", "@mailinator2.com", "@mailincubator.com", "@mailme.ir",
+        "@mailmoat.com", "@mailinator.com", "@mailnesia.com", "@mailnull.com", "@mailshell.com", "@mailsiphon.com", "@mailslite.com",
+        "@mail-temporaire.fr", "@mailzilla.", "@mbx.cc", "@mega.zik.dj", "@meinspamschutz.de", "@messagebeamer.de",
+        "@mierdamail.com", "@mindtree.com", "@mintemail.com", "@moburl.com", "@moncourrier.fr.nf",
+        "@monemail.fr.nf", "@monmail.fr.nf", "@msa.minsmail.com", "@msn.com", "@mt2009.com", "@mx0.wwwnew.eu", "@mycleaninbox.net",
+        "@mypartyclip.de", "@myphantomemail.com", "@myspaceinc.", "@myspaceinc.org", "@myspacepimpedup.com", "@myspamless.com",
+        "@mytrashmail.com",
+        "@neomailbox.com", "@nepwk.com", "@nervmich.net", "@nervtmich.net", "@netwoven.com", "@netmails.", "@netzidiot.de", "@neverbox.com",
+        "@nobulk.com", "@noclickemail.com", "@nogmailspam.info", "@nomail.xl.cx", "@nomail2me.com", "@nomorespamemails.com",
+        "@no-spam.ws", "@nospam.ze.tc", "@nospam4.us", "@nospamfor.us", "@nospamthanks.info", "@notmailinator.com", "@nowmymail.com",
+        "@nurfuerspam.de", "@nus.edu.sg", "@nwldx.com",
+        "@objectmail.com", "@obobbo.com", "@oneoffemail.com", "@onewaymail.com", "@online.ms", "@ordinaryamerican.net",
+        "@otherinbox.com", "@ourklips.com", "@outlawspam.com", "@outlook.com", "@ovpn.to", "@owlpic.com",
+        "@pancakemail.com", "@pimpedupmyspace.com", "@pjjkp.com", "@poofy.org", "@privacy.net", "popenus@mail", "@proxymail.eu",
+        "@prtnx.com", "@punkass.com", "@PutThisInYourSpamDatabase.com",
+        "@qq.com", "@quest.com", "@quickinbox.com",
+        "@rcpt.at", "@recode.me", "@recursor.net", "@rediffmail.com", "@regbypass.com", "@regbypass.comsafe-mail.net",
+        "@rejectmail.com", "@rklips.com", "@rmqkr.net", "@rtrtr.com",
+        "@safersignup.de", "@safetymail.info", "@safetypost.de", "@sandelf.de", "@saynotospams.com", "@selfdestructingmail.com",
+        "@SendSpamHere.com", "@sfs.com","@share-gate.com", "@sharklasers.com", "@shiftmail.com", "@shitmail.me", "@shortmail.net", "@sibmail.com",
+        "@skeefmail.com", "@slaskpost.se", "@slopsbox.com", "@smellfear.com", "@snakemail.com", "@sneakemail.com", "@sofimail.com",
+        "@sofort-mail.de", "@sogetthis.com", "@soodonims.com", "@spam.", "@spamavert.com", "@spambob.", "@spambog.", "@spambox.info",
+        "@spambox.irishspringrealty.com", "@spambox.us", "@spamcannon.", "@spamcero.com", "@spamcon.org", "@spamcorptastic.com",
+        "@spamcowboy.", "@spamday.com", "@spamex.com", "@spamfree24.", "@spamgourmet.", "@SpamHereLots.com", "@SpamHerePlease.com",
+        "@spamhole.com", "@spamify.com", "@spaminator.de", "@spamkill.info", "@spaml.com", "@spaml.de", "@spamobox.com", "@spamoff.de",
+        "@spamslicer.com", "@spamspot.com", "@spamthis.co.uk", "@spamthisplease.com", "@spamtrail.com", "@speed.1s.fr",
+        "@stealth-soft.com", "@suioe.com", "@supergreatmail.com", "@suremail.info", "svperez@stilconsult.com",
+        "@teewars.org", "@teleworm.com", "@tempalias.com", "@tempemail.", "@tempe-mail.com", "@TempEMail.net", "@tempinbox.co.uk",
+        "@tempinbox.com", "@tempmail.it", "@tempmail2.com", "@tempomail.fr", "@temporarily.de", "@temporarioemail.com.br",
+        "@temporaryemail.net", "@temporaryforwarding.com", "@temporaryinbox.com", "@thanksnospam.info", "@thankyou2010.com",
+        "@thisisnotmyrealemail.com", "@throwawayemailaddress.com", "@tilien.com", "@tmailinator.com", "@tradermail.info",
+        "@trash2009.com", "@trash-amil.com", "@trashemail.de", "@trashmail.", "@trash-mail.", "@trashmailer.com", "@trashymail.",
+        "@trbvm.com",
+        "@trillianpro.com", "@turual.com", "@twinmail.de", "@tyldd.com",
+        "@uggsrock.com", "@upliftnow.com", "@uplipht.com",
+        "@venompen.com", "@veryrealemail.com", "@viditag.com", "@viewcastmedia.",
+        "@webm4il.info", "@wegwerfadresse.de", "@wegwerfemail.de", "@wegwerfmail.", "@wetrainbayarea.com", "@wh4f.org", "@whyspam.me",
+        "@willselfdestruct.com", "@winemaven.info",  "@wronghead.com", "@wuzup.net", "@wuzupmail.net", "@www.e4ward.com",
+        "@www.gishpuppy.com", "@www.mailinator.com", "@wwwnew.eu",
+        "@xagloo.com", "@xavor.com", "@xemaps.com", "@xents.com", "@xmaily.com", "@xoxy.net", "@xs4all.nl",
+        "@yahoo.", "@yeah.com", "yeah.net", "@yep.it", "@ymail.", "@yogamaven.com", "@yopmail.", "@ypmail.webarnak.fr.eu.org", "@yuurok.com",
+        "@zehnminutenmail.de", "@zippymail.info", "@zoaxe.com", "@zoemail.org"
+    ];
+
+var posted = false;
+
+	$(document).ready(function(){
+
+		var linkData,
+			hostname = location.hostname;
+
+		if (hostname === "localhost"){
+			hostname = "https://www.workspace.com";
+		} else {
+			hostname = '';
+		}
+
+
+		linkData = {
+			errors: {}
+		};
+
+		var qd = {};
+		location.search.substr(1).split("&").forEach(function(item) {
+		    var s = item.split("="),
+		        k = s[0],
+		        v = s[1] && decodeURIComponent(s[1]);
+		    if (k in qd)
+		    	qd[k].push(v);
+		    else
+		    	qd[k] = [v];
+		});
+
+		var jsviewTemplateLoaded, siteCJTemplateLoaded;
+
+		jsviewTemplateLoaded = $.ajax({url: 'freetrialtemplate.html'}).then(function(contents){
+			$('head').append(contents);
+		});
+
+		siteCJTemplateLoaded = new CJ.Collection(hostname+'/api/1/').get().then(function(coll,xhr){
+			linkData.vals = coll.template();
+
+			if (qd.email) {
+				linkData.vals.data('email', qd.email[0]);
+			}
+
+			if (qd.adminFirstName) {
+				linkData.vals.data('adminFirstName', qd.adminFirstName[0]);
+			}
+
+			if (qd.adminLastName) {
+				linkData.vals.data('adminLastName', qd.adminLastName[0]);
+			}
+
+			if (qd.name) {
+				linkData.vals.data('name', qd.name[0]);
+			}
+
+		}).fail(function(coll,xhr){
+			$('.trial-form').hide();
+			$('[name="trial"] h1').text("We're sorry, free trial sign up is temporarily unavailable.  Please try again later.");
+		});
+
+		$.when(jsviewTemplateLoaded, siteCJTemplateLoaded).then(function(){
+			$.templates('#tmpl').link('div[name="freetrial"]',linkData);
+			$("#createWorkspace").on('click',createSite);
+			$("#reset").on('click',resetFields);
+		});
+
+
+		function createSite(){
+			var errors, email;
+
+			if (posted) return;
+
+			if (qd.referrer)
+				linkData.vals.data('referrer', qd.referrer[0]);
+
+			$.observable(linkData).setProperty('errors',null);
+
+			if (!qd.noname) {
+				/*
+				// check if adminFirstName / adminLastName are required
+				if (!linkData.vals.data('adminFirstName').first().value()) {
+					errors = errors || {};
+					errors.adminFirstName = [{
+						message: "Required"
+					}];
+				}
+				if (!linkData.vals.data('adminLastName').first().value()) {
+					errors = errors || {};
+					errors.adminLastName = [{
+						message: "Required"
+					}];
+				}
+				*/
+
+				// check invalid domains
+				email = linkData.vals.data('email').first();
+				email = email && email.value();
+				/* disable blocking domains
+				if (email) {
+					invalidDomains.some(function(d){
+						if (email.indexOf(d) >= 0) {
+							errors = errors || {};
+							errors.email = [{
+								message: "You may not use a personal email."
+							}];
+							return true;
+						}
+						return false;
+					});
+				}
+				*/
+				if (errors) {
+					$.observable(linkData).setProperty('errors',errors);
+
+					$('.errors').get(0).scrollIntoView();
+					window.scrollBy(0,-60);
+
+					return;
+				}
+			}
+
+			posted = true;
+
+			linkData.vals.submit().then(function(coll,xhr){
+
+				/*
+				var item,objectid;
+
+				document.sfForm.first_name.value = linkData.vals.data('adminFirstName').first().value();
+				document.sfForm.last_name.value = linkData.vals.data('adminLastName').first().value();
+				document.sfForm.email.value = linkData.vals.data('email').first().value();
+
+				item = coll.items().first();
+				objectid = item.data('objectid').first().value();
+				document.sfForm.workspaceid__c.value = objectid;
+
+				document.sfForm['00N40000001ze8a'].value = linkData.vals.data('name').first().value();
+
+				//use this to test the redirect to freetrailsuccess.html
+				//hostname = "localhost/~delaneydargenio/website";
+				document.sfForm.retURL.value = 'https://'+location.hostname+'/freetrialsuccess.html';
+				document.sfForm.submit();
+				*/
+
+				location.href = '/freetrialsuccess.html';
+
+			}).fail(function(coll,xhr){
+
+				if(xhr.status === 400) {
+
+					var errors = coll.errors();
+					$.observable(linkData).setProperty('errors',errors);
+
+					$('.errors').get(0).scrollIntoView();
+					window.scrollBy(0,-60);
+				}
+
+					/*
+				else if(xhr.status === 503){
+					document.sfForm.first_name.value = linkData.vals.data('adminFirstName').first().value();
+					document.sfForm.last_name.value = linkData.vals.data('adminLastName').first().value();
+					document.sfForm.email.value = linkData.vals.data('email').first().value();
+					document.sfForm.workspaceid__c.value = '0';
+					document.sfForm['00N40000001ze8a'].value = 'no-site-workspace-down-for-maintenance';
+					//use this to test the redirect to freetrialerror.html
+					//hostname = "localhost/~delaneydargenio/website";
+					document.sfForm.retURL.value = 'http://'+hostname+'/freetrialerror.html';
+					document.sfForm.submit();
+				}
+					*/
+				else {
+					location.href = '/freetrialerror.html';
+				}
+			}).always(function() {
+				posted = false;
+			});
+		}
+
+		function resetFields(){
+			$.observable(linkData).setProperty('errors',{});
+			$.observable(linkData.vals.data('adminFirstName').first().toObject()).setProperty('value','');
+			$.observable(linkData.vals.data('adminLastName').first().toObject()).setProperty('value','');
+			$.observable(linkData.vals.data('email').first().toObject()).setProperty('value','');
+			$.observable(linkData.vals.data('password').first().toObject()).setProperty('value','');
+			$.observable(linkData.vals.data('name').first().toObject()).setProperty('value','');
+		}
+	});
+})();

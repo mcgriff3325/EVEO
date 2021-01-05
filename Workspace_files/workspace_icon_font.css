@@ -1,0 +1,75 @@
+@font-face {
+  font-family: 'workspace_icon_font';
+  src: url('../webfont/font/workspace_icon_font.eot?75171867');
+  src: url('../webfont/font/workspace_icon_font.eot?75171867#iefix') format('embedded-opentype'),
+       url('../webfont/font/workspace_icon_font.woff2?75171867') format('woff2'),
+       url('../webfont/font/workspace_icon_font.woff?75171867') format('woff'),
+       url('../webfont/font/workspace_icon_font.ttf?75171867') format('truetype'),
+       url('../webfont/font/workspace_icon_font.svg?75171867#workspace_icon_font') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+/* Chrome hack: SVG is rendered more smooth in Windozze. 100% magic, uncomment if you need it. */
+/* Note, that will break hinting! In other OS-es font will be not as sharp as it could be */
+/*
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  @font-face {
+    font-family: 'workspace_icon_font';
+    src: url('../font/workspace_icon_font.svg?75171867#workspace_icon_font') format('svg');
+  }
+}
+*/
+
+ .ws {
+  font-family: "workspace_icon_font";
+  font-style: normal;
+  font-weight: normal;
+  speak: none;
+
+  display: inline-block;
+  text-decoration: inherit;
+  width: 1em;
+  height:1em;
+  text-align: center;
+  vertical-align: -15%;
+  /* opacity: .8; */
+
+  /* For safety - reset parent styles, that can break glyph codes*/
+  font-variant: normal;
+  text-transform: none;
+
+  /* fix buttons height, for twitter bootstrap */
+  line-height: 1em;
+
+  /* Animation center compensation - margins should be symmetric */
+  /* remove if not needed */
+
+  /* you can be more comfortable with increased icons size */
+  font-size: 120%;
+
+  /* Font smoothing. That was taken from TWBS */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Uncomment for 3D effect */
+  /* text-shadow: 1px 1px 1px rgba(127, 127, 127, 0.3); */
+}
+
+.ws.ws-workspace:before { content: '\e800'; } /* '' */
+.ws.ws-users:before { content: '\e801'; } /* '' */
+.ws.ws-test:before { content: '\e802'; } /* '' */
+.ws.ws-task:before { content: '\e803'; } /* '' */
+.ws.ws-settings:before { content: '\e804'; } /* '' */
+.ws.ws-security:before { content: '\e805'; } /* '' */
+.ws.ws-requirements:before { content: '\e806'; } /* '' */
+.ws.ws-reporting:before { content: '\e807'; } /* '' */
+.ws.ws-plans:before { content: '\e808'; } /* '' */
+.ws.ws-project:before { content: '\e809'; } /* '' */
+.ws.ws-issue:before { content: '\e80a'; } /* '' */
+.ws.ws-extension:before { content: '\e80b'; } /* '' */
+.ws.ws-document:before { content: '\e80c'; } /* '' */
+.ws.ws-defect:before { content: '\e80d'; } /* '' */
+.ws.ws-customize:before { content: '\e80e'; } /* '' */
+.ws.ws-change:before { content: '\e80f'; } /* '' */
+.ws.ws-alerts:before { content: '\e810'; } /* '' */
+.ws.ws-agile:before { content: '\e811'; } /* '' */

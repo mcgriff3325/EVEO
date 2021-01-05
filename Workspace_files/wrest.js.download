@@ -1,0 +1,496 @@
+/**
+ * A thin wrapper around jQuery ajax functionality to provide a higher
+ * fidelity rest implementation.
+ * @name jQuery.wrest
+ * @namespace
+ */
+
+
+(function($){
+	var toMatch = null,
+	    credential = null,
+	    authType = "Basic",
+	    tz = null,
+	    logging = false,
+	    statusCodes = {},
+	    requestFilter,
+	    responseFilter,
+	    always,
+	    UriTemplate = window.UriTemplate;
+
+	function detectTimezone() {
+		tz = window.tzdetect && window.tzdetect.matches()[0] || undefined;
+	}
+
+	function log(data, o, dir) {
+		if (!logging) return;
+
+		if (console && o)
+			console.log(dir + ' ' + o.type + ' ' + o.url);
+		if (console && data)
+			console.log(data);
+	}
+
+	function handleStatus(data, textStatus, error, xhr, o, statusCode) {
+		if (statusCode) {
+			var fn = statusCode[xhr.status];
+			if (fn)
+				if (error)
+					fn(xhr, textStatus, error, data, o);
+				else
+					fn(data,textStatus,xhr,o);
+		}
+	}
+
+	function handleSuccess(data, textStatus, xhr, o, d, statusCode) {
+		var filter = o.responseFilter || responseFilter;
+
+		log(data, o, 'Response');
+
+		// if mutate, update the jQuery lastModified and etag since
+		// jQuery incorrectly sets If-None-Match and If-Modified-Since when
+		// method is not GET.  If-Match or If-Unmodified-Since should be set
+		// which is what is done in wrest.getOpts.  Further jQuery only
+		// uses returned Last-Modified and ETag headers if in ifModified
+		// mode.  But that mode can't be set when using non-GET methods
+		// as it will result in the If-None-Match and If-Modified-Since headers
+		// being set and sent
+		if ((o.type == "POST" || o.type == "PUT" || o.type == "DELETE") &&
+				(o.condUpdate)) {
+
+			// If we're given a new location, use that instead of the request
+			// url for caching
+			var url = xhr.getResponseHeader("Location");
+			url = url || o.url;
+
+			var modified = xhr.getResponseHeader("Last-Modified");
+			if ( modified ) {
+				jQuery.lastModified[ url ] = modified;
+			}
+			modified = xhr.getResponseHeader("etag");
+			if ( modified ) {
+				jQuery.etag[ url ] = modified;
+			}
+		}
+		if (filter)
+			data = filter(data, xhr, o);
+
+		d.resolveWith(this, [data, textStatus, xhr, o]);
+		handleStatus(data,textStatus, null, xhr, o, statusCode);
+	}
+
+	function handleError(xhr,textStatus,error, o, d, statusCode) {
+		var data = xhr.responseText,
+			filter = o.responseFilter || responseFilter;
+
+		if (/\/json/.test(xhr.getResponseHeader('Content-Type'))
+				&& xhr.responseText) {
+			try {
+				data = JSON.parse(xhr.responseText);
+			} catch (e) {
+				data = xhr.responseText;
+			}
+		}
+		log(data, o, 'Response');
+
+		if (filter)
+			data = filter(data, xhr, o);
+
+		d.rejectWith(this, [xhr, textStatus, error, data, o]);
+		handleStatus(data,textStatus, error, xhr, o, statusCode);
+	}
+
+	function wrap(cb, o, d, statusCode) {
+		return function() {
+			var a = Array.prototype.slice.call(arguments);
+			a = a.concat([o,d, statusCode]);
+			cb.apply(this, a);
+		};
+	}
+
+	function ajax(url,o,d,statusCode) {
+		log(o.d, o, 'Request');
+
+		$.ajax(url, o)
+		 .done(wrap(handleSuccess,o,d,statusCode))
+		 .fail(wrap(handleError,o,d,statusCode));
+	}
+
+	var defaults = {
+			ifModified: true,
+			contentType: "application/json",
+			//dataType: "json",
+			condUpdate: true,
+			processData: true,
+			xhrFields : {
+				withCredentials : true
+			}
+		};
+
+	function getOpts(method, options) {
+		var opts = {
+				type: method
+			};
+
+		if (toMatch == null || (toMatch && toMatch.test(options.url))) {
+
+			// If UriTemplate is set try to expand any template params
+			if (UriTemplate && options.url) {
+				var template = UriTemplate.parse(options.url);
+				var params = $.extend({},options.data,options.uriParams);
+				options.url = template.expand(params);
+			}
+
+			// Set conditional update headers for PUT / DELETE
+			if (opts.type == "GET") {
+				// make get requests send conditional etag when we have it
+				opts.ifModified = true;
+			} else if (opts.type == "POST" || opts.type == "PUT"
+				|| opts.type == "DELETE") {
+
+				// add support for conditional updates
+				options.ifModified = false;
+
+				// If condUpdate is true or not defined, set the conditional
+				// update headers
+				if ( ("condUpdate" in options && options.condUpdate) ||
+						(!("condUpdate" in options)) ) {
+					if ( jQuery.lastModified[ options.url ] )
+						opts = $.extend(
+								true,
+								opts,
+								{ headers: {"If-Unmodified-Since": jQuery.lastModified[ options.url ] } });
+
+					if ( jQuery.etag[ options.url ] )
+						opts = $.extend(
+								true,
+								opts, { headers: {"If-Match": jQuery.etag[ options.url ] } });
+				}
+			}
+			// set up authorization, if any
+			if (credential)
+				opts = $.extend(
+						true,
+						opts,
+						{ headers: {"Authorization": authType + " " + credential}});
+
+			// TODO: refactor timezone to request filter as this is workspace specific
+
+			// setup timezone info, if any
+			if (tz)
+				opts = $.extend(
+						true,
+						opts,
+						{ headers: {"X-Timezone": tz}});
+
+			// construct options
+			opts = $.extend(true, {}, defaults, opts, options);
+
+			// filter the request as the last step before serialization
+			if (requestFilter) {
+				opts = requestFilter(opts);
+				log(opts.data, opts, 'Request filter');
+			}
+
+		} else {
+			opts = $.extend({}, defaults, opts, options);
+		}
+
+		return opts;
+	}
+
+	function makeAPI(method) {
+		return function(url, options) {
+
+			// If url is an object, simulate pre-1.5 signature
+			if ( typeof url === "object" ) {
+				options = url;
+				url = undefined;
+			}
+
+			// Force options to be an object
+			options = options || {};
+
+			// set the url on the options object
+			options.url = url ? url : options.url;
+
+			// force url to valid
+			if (!options.url)
+				throw new Error('options.url must not be null');
+
+			var o = getOpts(method, options),
+
+				d = $.Deferred(),
+
+				statusCode = $.extend({}, statusCodes, o.statusCode);
+
+			o.statusCode = {};
+
+			ajax(o.url,o,d,statusCode);
+
+			if (always)
+				d.always(always);
+
+			return d.promise();
+
+		};
+	}
+
+	var pub =
+	/** @lends jQuery.wrest */
+	{
+		/**
+		 * Performs a POST ajax call.
+		 * If the UriTemplate library (https://github.com/fxa/uritemplate-js)
+		 * is included and the contentType is unspecified or set to a json type
+		 * and the options.data parameter is an object, the options.url
+		 * parameter will have any variables expanded using the options.data
+		 * parameter. If the options.data parameter is an object and
+		 * contentType is unspecified or set to a json type, the data will be
+		 * stringified before sending. If an error occurs and a body is
+		 * specified and the response header Content Type is a json type, the
+		 * body will be parsed into a json object.  In all cases the body will
+		 * be sent as the 4th parameter to registered fail functions. If
+		 * options.condUpdate is unspecified or true then If-Match and
+		 * If-Unmodified-Since headers will be set if the options.url has been
+		 * seen before.
+		 * @param {string} [url] If not specified, it must be specified in
+		 *      options.url.  This field may also include as uri template when
+		 *      used with json resources as described above.
+		 *
+		 * @param {string} [options] If not specified, url must be specified.
+		 *
+		 * @param {boolean} [options.condUpdate=true] true indicates that
+		 *      If-Match and if-Unmodified-Since request headers should be
+		 *      sent with the request.  When set to true an attempt will be
+		 * 		made to locate the headers for the specified URL.  This will
+		 *      only be success if the resource at url has been previously
+		 *      requested.
+		 *
+		 * @param options.data If an object and options.contentType is
+		 *      unspecified or a json type the object will be stringified and
+		 *      then sent as the request body.
+		 *
+		 * @param {object} [options.uriParams] If specified, and UriTemplate
+		 *      is available, these properties are combined with options.data
+		 *      properties when resolving uri templates in url or options.url.
+		 *      option.uriParams values will take precedence over options.data
+		 *      values.
+		 *
+		 * @return {jQuery.Deferred}
+		 */
+		post : makeAPI("POST"),
+
+		/**
+		 * Performs a GET ajax call.
+		 * If an error occurs and a body is specified and the response header
+		 * Content Type is a json type, the body will be parsed into a json
+		 * object.  In all cases the body will be sent as the 4th parameter to
+		 * registered fail functions.
+		 *
+		 * @param {string} [url] If not specified, it must be specified in
+		 *      options.url.  This field may also include as uri template when
+		 *      used with json resources as described above.
+		 *
+		 * @param {string} [options] If not specified, url must be specified.
+		 *
+		 * @param {object} [options.uriParams] If specified, and UriTemplate
+		 *      is available, these properties are use when resolving uri
+		 *      templates in url or options.url.
+		 *
+		 * @return {jQuery.Deferred}
+		 */
+		get : makeAPI("GET"),
+
+		/**
+		 * Performs a PUT ajax call.
+		 * If the UriTemplate library (https://github.com/fxa/uritemplate-js)
+		 * is included (or an interface compatible library is set via
+		 * setUriTemplate) and the contentType is unspecified or set to a json
+		 * type and the options.data parameter is an object, the options.url
+		 * parameter will have any variables expanded using the options.data
+		 * parameter.  If the options.data parameter is an object and
+		 * contentType is unspecified or set to a json type, the data will be
+		 * stringified before sending. If an error occurs and a body is
+		 * specified and the response header Content Type is a json type, the
+		 * body will be parsed into a json object.  In all cases the body will
+		 * be sent as the 4th parameter to registered fail functions. If
+		 * options.condUpdate is unspecified or true then If-Match and
+		 * If-Unmodified-Since headers will be set if the options.url has been
+		 * seen before.
+		 *
+		 * @param {string} [url] If not specified, it must be specified in
+		 *      options.url.  This field may also include as uri template when
+		 *      used with json resources as described above.
+		 *
+		 * @param {string} [options] If not specified, url must be specified.
+		 *
+		 * @param {boolean} [options.condUpdate=true] true indicates that
+		 *      If-Match and if-Unmodified-Sincerequest headers should be sent
+		 *      with the request.  When set to true an attempt will be made to
+		 *      locate the headers for the specified URL.  This will only be
+		 *      success if the resource at url has been previously requested.
+		 *
+		 * @param options.data If an object and options.contentType is
+		 *      unspecified or a json type the object will be stringified and
+		 *      then sent as the request body.
+		 *
+		 * @param {object} [options.uriParams] If specified, and UriTemplate
+		 *      is available, this properties are combined with options.data
+		 *      properties when resolving uri templates in url or options.url.
+		 *      option.uriParams values will take precedence over options.data
+		 *      values.
+		 *
+		 * @return {jQuery.Deferred}
+		 */
+		put : makeAPI("PUT"),
+
+		/**
+		 * Performs a DELETE ajax call.
+		 * If the UriTemplate library (https://github.com/fxa/uritemplate-js)
+		 * is included and the contentType is unspecified or set to a json type
+		 * and the options.data parameter is an object, the options.url
+		 * parameter will have any variables expanded using the options.data
+		 * parameter. If the options.data parameter is an object and
+		 * contentType is unspecified or set to a json type, the data will be
+		 * stringified before sending. If an error occurs and a body is
+		 * specified and the response header Content Type is a json type, the
+		 * body will be parsed into a json object.  In all cases the body will
+		 * be sent as the 4th parameter to registered fail functions. If
+		 * options.condUpdate is unspecified or true then If-Match and
+		 * If-Unmodified-Since headers will be set if the options.url has been
+		 * seen before.
+		 *
+		 * @param {string} [url] If not specified, it must be specified in
+		 *      options.url.  This field may also include as uri template when
+		 *      used with json resources as described above.
+		 *
+		 * @param {string} [options] If not specified, url must be specified.
+		 *
+		 * @param {boolean} [options.condUpdate=true] true indicates that
+		 *      If-Match and if-Unmodified-Since request headers should be sent
+		 *      with the request.  When set to true an attempt will be made to
+		 *      locate the headers for the specified URL.  This will only be
+		 *      success if the resource at url has been previously requested.
+		 *
+		 * @param options.data If an object and options.contentType is
+		 *      unspecified or a json type the object will be stringified and
+		 *      then sent as the request body.
+		 *
+		 * @param {object} [options.uriParams] If specified, and UriTemplate
+		 *      is available, this properties are combined with options.data
+		 *      properties when resolving uri templates in url or options.url.
+		 *      option.uriParams values will take precedence over options.data
+		 *      values.
+		 *
+		 * @return {jQuery.Deferred}
+		 */
+		del : makeAPI("DELETE"),
+
+		/**
+		 * Used to limit which URLs are processed by the wrest options handling.
+		 * By default all URLs will be processed.  If specified, only URLs
+		 * matching the specified regex will be processed.
+		 *
+		 * @param {string} regex - The regular expression to match URLs against.
+		 */
+		matchOnly : function(regex) {
+			toMatch = new RegExp(regex);
+		},
+
+		/**
+		 * Used to specify what authentication, if any, should be used.  If not
+		 * specified, no authentication is used.  Presently only supports
+		 * Basic, so be sure to use SSL/TLS if authentication is used.
+		 *
+		 *  @param {string} type The authentication type. eg Basic or Digest
+		 *  @param {string} user The user to authenticate
+		 *  @param {string} pass The password to authenticate
+		 */
+		auth : function ( type, user, pass ) {
+			authType = type;
+			credential = window.btoa(user+":"+pass);
+		},
+
+		/**
+		 * Set a uri template handler.  By default wrest will look for and use.
+		 * window.UriTemplate or module.UriTemplate
+		 * @param func
+		 */
+		setUriTemplate : function ( func ) {
+			UriTemplate = func;
+		},
+
+		/**
+		 * Sets the timezone.  By default wrest will detect the clients
+		 * timezone.
+		 * @param offset Timezone in format of Olson id. (eg. 'America/New_York')
+		 */
+		setTz : function (timezone) {
+			tz = timezone;
+		},
+
+		/**
+		 * Enables or disables logging of every request and response.
+		 * When enabled each request and associated response is logged
+		 * to the console. Each log entry will be in the form:
+		 *   Request GET http://foo.com/api/1/bar
+		 *   { data : "foo" }
+		 *   Response GET http://foo.com/api/1/bar
+		 *   [ { foo : "bar" }, .. ]
+		 * @param enable true to enable logging, false to stop.
+		 */
+		log : function (enable) {
+			logging = enable;
+		},
+
+		/**
+		 * Register a function to be called immediately before
+		 * every request.  This function may be overidden by providing
+		 * and alternate function as part of options.requestFilter.
+		 */
+		requestFilter : function ( func ) {
+			requestFilter = func;
+		},
+
+		/**
+		 * Register a function to be called after every response has
+		 * been processed, but before any handlers have been called.
+		 * The function will be passed data (preprocessed response
+		 * form the server - eg JSON converted to object, etc) and
+		 * xhr.  The function may return a new, modified, data object.
+		 * This function may be overriden by providing an alternate
+		 * function as part of options.responseFilter
+		 */
+		responseFilter : function ( func ) {
+			responseFilter = func;
+		},
+
+		/**
+		 * Pass a map of status code (integer) -> function to be
+		 * called when status is encountered.  The function will be
+		 * called after normal done / fail handlers. If a status
+		 * code is specified in the options to a get/put/post/del
+		 * request, then any status code specified here will be
+		 * overridden.
+		 */
+		statusCode : function (codes) {
+			statusCodes = codes;
+		},
+
+		/**
+		 * Register a function or array of functions to be called
+		 * after every response has been processed.
+		 */
+		always : function ( func ) {
+			always = func;
+		}
+	};
+
+	// export the workspace rest public api to jQuery namespace
+	$.wrest = pub;
+
+	// setup default timezone to be sent to server
+	detectTimezone();
+
+})(jQuery);
